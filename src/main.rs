@@ -28,7 +28,8 @@ pub fn main() -> Result<(), String> {
     let mut event_pump = sdl_context.event_pump().map_err(|e| e.to_string())?;
     let texture_creator = canvas.texture_creator();
 
-    let red_square = create_texture_rect(&texture_creator, Color::RGBA(255, 0, 0, 255), 1, 1)?;
+    let mut red_square = create_texture_rect(&texture_creator, Color::RGBA(255, 0, 0, 255), 2, 2)?;
+    //set_pixel(&mut red_square, 0, 1, Color::RGBA(255,255,255,255))?;
     let mut mouse_pos = (0,0);
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -84,7 +85,7 @@ fn create_texture_rect<'a>(
     width: u32,
     height: u32,
 ) -> Result<Texture<'a>, String> {
-    let pixel_format_enum = sdl2::pixels::PixelFormatEnum::RGBA8888;
+    let pixel_format_enum = sdl2::pixels::PixelFormatEnum::ABGR8888;
     let mut texture = texture_creator
         .create_texture_streaming(pixel_format_enum, width, height)
         .map_err(|e| e.to_string())?;
@@ -94,13 +95,36 @@ fn create_texture_rect<'a>(
             for y in 0..height {
                 for x in 0..width {
                     let offset = y as usize * pitch + x as usize * 4;
-                    buffer[offset] = color.r;
-                    buffer[offset + 1] = color.g;
-                    buffer[offset + 2] = color.b;
-                    buffer[offset + 3] = color.a;
+                    buffer[offset] = color.a;
+                    buffer[offset + 1] = color.b;
+                    buffer[offset + 2] = color.g;
+                    buffer[offset + 3] = color.r;
                 }
             }
         })
         .map_err(|e| e.to_string())?;
     Ok(texture)
+}
+fn set_pixel(
+    texture: &mut sdl2::render::Texture,
+    x: usize,
+    y: usize,
+    color: Color,
+) -> Result<(), String> {
+    let texture_info = texture.query();
+    let width = texture_info.width as usize;
+    let height = texture_info.height as usize;
+
+    if x >= width || y >= height {
+        return Err("Pixel coordinates out of bounds".to_string());
+    }
+    texture.with_lock(None, |buffer: &mut [u8], pitch: usize| {
+        let offset = y * pitch + x * 4;
+        buffer[offset] = color.r;
+        buffer[offset + 1] = color.g;
+        buffer[offset + 2] = color.b;
+        buffer[offset + 3] = color.a;
+    })?;
+
+    Ok(())
 }
