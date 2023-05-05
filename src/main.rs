@@ -1,5 +1,6 @@
-extern crate sdl2;
-
+mod map_generator;
+mod cell;
+mod cell_type;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -29,7 +30,7 @@ pub fn main() -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
 
     let mut red_square = create_texture_rect(&texture_creator, Color::RGBA(255, 0, 0, 255), 2, 2)?;
-    //set_pixel(&mut red_square, 0, 1, Color::RGBA(255,255,255,255))?;
+    set_pixel(&mut red_square, 0, 1, Color::RGBA(255,255,255,255))?;
     let mut mouse_pos = (0,0);
     'running: loop {
         for event in event_pump.poll_iter() {
