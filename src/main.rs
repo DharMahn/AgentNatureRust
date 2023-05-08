@@ -13,7 +13,7 @@ pub fn main() -> Result<(), String> {
     let video_subsystem = sdl_context.video()?;
 
     let window = video_subsystem
-        .window("rust-sdl2 demo: Window", 400, 400)
+        .window("rust-sdl2 demo: Window", 1280, 720)
         .resizable()
         .build()
         .map_err(|e| e.to_string())?;
@@ -29,8 +29,18 @@ pub fn main() -> Result<(), String> {
     let mut event_pump = sdl_context.event_pump().map_err(|e| e.to_string())?;
     let texture_creator = canvas.texture_creator();
 
-    let mut red_square = create_texture_rect(&texture_creator, Color::RGBA(255, 0, 0, 255), 2, 2)?;
-    set_pixel(&mut red_square, 0, 1, Color::RGBA(255,255,255,255))?;
+    //let mut red_square = create_texture_rect(&texture_creator, Color::RGBA(255, 0, 0, 255), 2, 2)?;
+    let width = 1280;
+    let height = 720;
+    let mut map_texture = create_texture_rect(&texture_creator, Color::BLACK, width, height)?;
+    let map = map_generator::generate_map(width as usize,height as usize);
+    println!("finished generating the map");
+
+    for i in 0..map.len() {
+        for j in 0..map[0].len(){
+            set_pixel(&mut map_texture, i, j, map[i][j].get_cell_color())?;
+        }
+    }
     let mut mouse_pos = (0,0);
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -65,14 +75,14 @@ pub fn main() -> Result<(), String> {
         let scale_y = 2.0;
         canvas.set_scale(scale_x, scale_y)?;
 
-        let translate_x = 100;
-        let translate_y = 100;
-        let translated_rect = Rect::new(translate_x, translate_y, 50, 50);
+        let translate_x = 0;
+        let translate_y = 0;
+        let translated_rect = Rect::new(translate_x, translate_y, width, height);
 
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
 
-        canvas.copy(&red_square, None, translated_rect)?;
+        canvas.copy(&map_texture, None, translated_rect)?;
 
         // Present the result
         canvas.present();

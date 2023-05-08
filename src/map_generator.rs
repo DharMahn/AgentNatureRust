@@ -3,8 +3,8 @@ use rand::Rng;
 use crate::cell_type::CellType;
 
 use super::cell::Cell;
-pub fn generate_map(map_size: usize) -> Vec<Vec<Cell>> {
-    let mut map = vec![vec![Cell::new(CellType::Empty); map_size]; map_size];
+pub fn generate_map(map_width: usize, map_height: usize) -> Vec<Vec<Cell>> {
+    let mut map = vec![vec![Cell::new(CellType::Empty); map_height]; map_width];
     generate_water(&mut map);
     generate_features(&mut map, 0.5, CellType::Grass);
     smooth_map(&mut map);
@@ -80,12 +80,12 @@ fn calculate_neighbours(map: &Vec<Vec<Cell>>, xpos: usize, ypos: usize) -> i32 {
 fn generate_walls(map: &mut Vec<Vec<Cell>>) {
     let width = map.len();
     let height = map[0].len();
-    for i in 0..map[0].len() {
+    for i in 0..map.len() {
         map[i][0].cell_type = CellType::Structure;
         map[i][height - 1].cell_type = CellType::Structure;
     }
-    for i in 0..map.len() {
-        map[0][i].cell_type == CellType::Structure;
+    for i in 0..map[0].len() {
+        map[0][i].cell_type = CellType::Structure;
         map[width - 1][i].cell_type = CellType::Structure;
     }
 }
@@ -94,13 +94,13 @@ fn generate_trees(map: &mut Vec<Vec<Cell>>) {
     for _ in 0..(map.len() * map[0].len()) / 100 {
         let id_x = rng.gen_range(0..map[0].len());
         let id_y = rng.gen_range(0..map.len());
-        if map[id_x][id_y].cell_type == CellType::Grass {
-            map[id_x][id_y].cell_type = CellType::Wood;
+        if map[id_y][id_x].cell_type == CellType::Grass {
+            map[id_y][id_x].cell_type = CellType::Wood;
         }
     }
 }
-fn generate_features(map: &mut Vec<Vec<Cell>>, treshold: f64, convert_into: CellType) {
-    let pnoise = generate_perlin_noise(generate_white_noise(map.len(), map[0].len()), 8);
+fn generate_features(map: &mut Vec<Vec<Cell>>, treshold: f32, convert_into: CellType) {
+    let pnoise = generate_perlin_noise(generate_white_noise(map[0].len(), map.len()), 8);
     for y in 0..map[0].len() {
         for x in 0..map.len() {
             if pnoise[x][y] < treshold {
@@ -110,36 +110,36 @@ fn generate_features(map: &mut Vec<Vec<Cell>>, treshold: f64, convert_into: Cell
     }
 }
 fn generate_water(map: &mut Vec<Vec<Cell>>) {
-    for y in 0..map.len() {
-        for x in 0..map[0].len() {
+    for y in 0..map[0].len() {
+        for x in 0..map.len() {
             map[x][y] = Cell::new(CellType::Water);
         }
     }
 }
-fn generate_white_noise(width: usize, height: usize) -> Vec<Vec<f64>> {
+fn generate_white_noise(width: usize, height: usize) -> Vec<Vec<f32>> {
     let mut rng = rand::thread_rng();
     let mut noise = vec![vec![0.0; height]; width];
     for i in 0..width {
         for j in 0..height {
-            noise[i][j] = rng.gen::<f64>();
+            noise[i][j] = rng.gen::<f32>();
         }
     }
     return noise;
 }
-fn generate_smooth_noise(base_noise: Vec<Vec<f64>>, octave: usize) -> Vec<Vec<f64>> {
+fn generate_smooth_noise(base_noise: Vec<Vec<f32>>, octave: usize) -> Vec<Vec<f32>> {
     let width = base_noise.len();
     let height = base_noise[0].len();
     let mut smooth_noise = vec![vec![0.0; width]; height];
     let sample_period = 1 << octave;
-    let sample_freq = 1.0 / (sample_period as f64);
+    let sample_freq = 1.0 / (sample_period as f32);
     for i in 0..width {
         let sample_i0 = (i / sample_period) * sample_period;
         let sample_i1 = (sample_i0 + sample_period) % width;
-        let horizontal_blend = (i - sample_i0) as f64 * sample_freq;
+        let horizontal_blend = (i - sample_i0) as f32 * sample_freq;
         for j in 0..height {
             let sample_j0 = (j / sample_period) * sample_period;
             let sample_j1 = (sample_j0 + sample_period) % height;
-            let vertical_blend = (j - sample_j0) as f64 * sample_freq;
+            let vertical_blend = (j - sample_j0) as f32 * sample_freq;
             let top = interpolate(
                 base_noise[sample_i0][sample_j0],
                 base_noise[sample_i1][sample_j0],
@@ -150,12 +150,12 @@ fn generate_smooth_noise(base_noise: Vec<Vec<f64>>, octave: usize) -> Vec<Vec<f6
                 base_noise[sample_i1][sample_j1],
                 horizontal_blend,
             );
-            smooth_noise[i][j] = interpolate(top, bottom, vertical_blend);
+            smooth_noise[j][i] = interpolate(top, bottom, vertical_blend);
         }
     }
     return smooth_noise;
 }
-fn generate_perlin_noise(base_noise: Vec<Vec<f64>>, octave_count: usize) -> Vec<Vec<f64>> {
+fn generate_perlin_noise(base_noise: Vec<Vec<f32>>, octave_count: usize) -> Vec<Vec<f32>> {
     let width = base_noise.len();
     let height = base_noise[0].len();
     let mut smooth_noise = vec![vec![vec![0.0; width]; height]; octave_count];
@@ -171,17 +171,17 @@ fn generate_perlin_noise(base_noise: Vec<Vec<f64>>, octave_count: usize) -> Vec<
         total_amplitude += amplitude;
         for i in 0..width {
             for j in 0..height {
-                perlin_noise[i][j] += smooth_noise[octave][i][j] * amplitude;
+                perlin_noise[j][i] += smooth_noise[octave][j][i] * amplitude;
             }
         }
     }
     for i in 0..width {
         for j in 0..height {
-            perlin_noise[i][j] /= total_amplitude;
+            perlin_noise[j][i] /= total_amplitude;
         }
     }
     return perlin_noise;
 }
-fn interpolate(x0: f64, x1: f64, alpha: f64) -> f64 {
+fn interpolate(x0: f32, x1: f32, alpha: f32) -> f32 {
     return x0 * (1.0 - alpha) + alpha * x1;
 }
